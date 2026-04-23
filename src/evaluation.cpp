@@ -96,6 +96,13 @@ Value Var::eval(Assoc &e) { // evaluation of variable
     return matched_value;
 }
 
+static Value normalize_frac(int num, int den) {
+    Value v = RationalV(num, den);
+    Rational* r = dynamic_cast<Rational*>(v.get());
+    if (r->denominator == 1) return IntegerV(r->numerator);
+    return v;
+}
+
 Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
     if (rand1->v_type == V_INT && rand2->v_type == V_INT) {
         int a = dynamic_cast<Integer*>(rand1.get())->n;
@@ -105,17 +112,17 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
     if (rand1->v_type == V_RATIONAL && rand2->v_type == V_INT) {
         Rational* r = dynamic_cast<Rational*>(rand1.get());
         int b = dynamic_cast<Integer*>(rand2.get())->n;
-        return RationalV(r->numerator + b * r->denominator, r->denominator);
+        return normalize_frac(r->numerator + b * r->denominator, r->denominator);
     }
     if (rand1->v_type == V_INT && rand2->v_type == V_RATIONAL) {
         int a = dynamic_cast<Integer*>(rand1.get())->n;
         Rational* r = dynamic_cast<Rational*>(rand2.get());
-        return RationalV(a * r->denominator + r->numerator, r->denominator);
+        return normalize_frac(a * r->denominator + r->numerator, r->denominator);
     }
     if (rand1->v_type == V_RATIONAL && rand2->v_type == V_RATIONAL) {
         Rational* r1 = dynamic_cast<Rational*>(rand1.get());
         Rational* r2 = dynamic_cast<Rational*>(rand2.get());
-        return RationalV(r1->numerator * r2->denominator + r2->numerator * r1->denominator,
+        return normalize_frac(r1->numerator * r2->denominator + r2->numerator * r1->denominator,
                          r1->denominator * r2->denominator);
     }
     throw(RuntimeError("Wrong typename"));
@@ -130,17 +137,17 @@ Value Minus::evalRator(const Value &rand1, const Value &rand2) { // -
     if (rand1->v_type == V_RATIONAL && rand2->v_type == V_INT) {
         Rational* r = dynamic_cast<Rational*>(rand1.get());
         int b = dynamic_cast<Integer*>(rand2.get())->n;
-        return RationalV(r->numerator - b * r->denominator, r->denominator);
+        return normalize_frac(r->numerator - b * r->denominator, r->denominator);
     }
     if (rand1->v_type == V_INT && rand2->v_type == V_RATIONAL) {
         int a = dynamic_cast<Integer*>(rand1.get())->n;
         Rational* r = dynamic_cast<Rational*>(rand2.get());
-        return RationalV(a * r->denominator - r->numerator, r->denominator);
+        return normalize_frac(a * r->denominator - r->numerator, r->denominator);
     }
     if (rand1->v_type == V_RATIONAL && rand2->v_type == V_RATIONAL) {
         Rational* r1 = dynamic_cast<Rational*>(rand1.get());
         Rational* r2 = dynamic_cast<Rational*>(rand2.get());
-        return RationalV(r1->numerator * r2->denominator - r2->numerator * r1->denominator,
+        return normalize_frac(r1->numerator * r2->denominator - r2->numerator * r1->denominator,
                          r1->denominator * r2->denominator);
     }
     throw(RuntimeError("Wrong typename"));
