@@ -494,20 +494,32 @@ Value Quote::eval(Assoc& e) {
     if (auto ss = dynamic_cast<StringSyntax*>(sb)) return StringV(ss->s);
     if (auto sy = dynamic_cast<SymbolSyntax*>(sb)) return SymbolV(sy->s);
     if (auto lst = dynamic_cast<List*>(sb)) {
-        // Build proper list or dotted pair according to elements
-        // Represent lists using Pair/Null directly by parsing elements into values
-        std::vector<Value> vals;
-        for (auto &el : lst->stxs) {
-            // Quote elements recursively
-            Quote q(el);
-            vals.push_back(q.eval(e));
+        // Detect dotted pair
+        int dot_pos = -1;
+        for (size_t i = 0; i < lst->stxs.size(); ++i) {
+            SymbolSyntax* sym = dynamic_cast<SymbolSyntax*>(lst->stxs[i].get());
+            if (sym && sym->s == ".") {
+                if (dot_pos != -1) throw RuntimeError("invalid dotted list");
+                dot_pos = (int)i;
+            }
         }
-        // Build list from vals
-        Value res = NullV();
-        for (int i = (int)vals.size() - 1; i >= 0; --i) {
-            res = PairV(vals[i], res);
+        if (dot_pos == -1) {
+            Value res = NullV();
+            for (int i = (int)lst->stxs.size() - 1; i >= 0; --i) {
+                Quote q(lst->stxs[i]);
+                res = PairV(q.eval(e), res);
+            }
+            return res;
+        } else {
+            if (dot_pos == 0 || dot_pos >= (int)lst->stxs.size() - 1) throw RuntimeError("invalid dotted list");
+            Quote tail_q(lst->stxs[dot_pos + 1]);
+            Value res = tail_q.eval(e);
+            for (int i = dot_pos - 1; i >= 0; --i) {
+                Quote q(lst->stxs[i]);
+                res = PairV(q.eval(e), res);
+            }
+            return res;
         }
-        return res;
     }
     throw RuntimeError("quote unsupported syntax");
 }
